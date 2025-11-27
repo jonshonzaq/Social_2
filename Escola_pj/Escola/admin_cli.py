@@ -57,8 +57,9 @@ def listar_classes():
         print("  Nenhuma classe encontrada")
         return
     for c in classes:
-        prof = c.professor.usuario.username if c.professor else "N/A"
-        print(f"  - {c.nome} | Professor: {prof} | Igreja: {c.igreja.nome}")
+        professores = Professor.objects.filter(classe=c)
+        prof_nomes = ", ".join([p.usuario.username for p in professores]) if professores else "N/A"
+        print(f"  - {c.nome} | Professores: {prof_nomes} | Igreja: {c.igreja.nome}")
 
 def listar_alunos():
     print("\n👨‍🎓 ALUNOS:")

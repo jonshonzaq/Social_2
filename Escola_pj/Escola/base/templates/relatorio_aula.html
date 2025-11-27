@@ -116,7 +116,7 @@
     {% endif %}
 
     <!-- Botão Concluir Aula (só para secretário/superintendente se aula não foi concluída) -->
-    {% if user.is_authenticated and user.role in 'secretario,superintendente' and not aula.concluida %}
+    {% if user.is_authenticated and user.role|add:'X' != 'professorX' and not aula.concluida %}
       <form method="post" action="{% url 'aula_concluir' aula.id %}" style="display:inline;">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger" onclick="return confirm('⚠️ Tem certeza? Após concluir a aula, o diário não poderá mais ser editado. Esta ação não poderá ser revertida.')">🔒 Concluir Aula</button>
