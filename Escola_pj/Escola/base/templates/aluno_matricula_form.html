@@ -8,7 +8,14 @@
     <strong>Classe:</strong> {{ classe.nome }} ({{ classe.igreja.nome }})<br>
     <strong>Trimestre:</strong> {{ trimestre.trimestre }} / {{ trimestre.ano }}
     {% if not trimestre.ativo %}<span class="badge bg-warning">Inativo</span>{% else %}<span class="badge bg-success">Ativo</span>{% endif %}
+    {% if trimestre.concluido %}<span class="badge bg-danger ms-2">Concluído</span>{% endif %}
   </div>
+
+  {% if trimestre.concluido %}
+    <div class="alert alert-danger" role="alert">
+      <strong>🔒 Atenção:</strong> Este trimestre foi concluído. Nenhuma modificação de matrícula é permitida.
+    </div>
+  {% endif %}
 
   <form method="post">
     {% csrf_token %}
@@ -41,7 +48,7 @@
     </div>
 
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Matricular selecionados / Criar e matricular</button>
+      <button type="submit" class="btn btn-primary" {% if trimestre.concluido %}disabled{% endif %}>Matricular selecionados / Criar e matricular</button>
       <a class="btn btn-secondary" href="{% url 'home' %}">← Voltar</a>
     </div>
   </form>

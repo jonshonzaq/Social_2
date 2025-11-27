@@ -6,8 +6,15 @@
 
   <div class="alert alert-info">
     <strong>Aluno:</strong> {{ aluno.nome }}<br>
-    <strong>Igreja:</strong> {{ aluno.igreja.nome }}
+    <strong>Igreja:</strong> {{ aluno.igreja.nome }}<br>
+    <strong>Trimestre:</strong> {{ trimestre.trimestre }}/{{ trimestre.ano }}
   </div>
+
+  {% if trimestre.concluido %}
+    <div class="alert alert-danger" role="alert">
+      <strong>🔒 Atenção:</strong> O trimestre foi concluído. Transferências de aluno não são permitidas.
+    </div>
+  {% endif %}
 
   <form method="post">
     {% csrf_token %}
@@ -23,7 +30,7 @@
     </div>
 
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Transferir</button>
+      <button type="submit" class="btn btn-primary" {% if trimestre.concluido %}disabled{% endif %}>Transferir</button>
       <a class="btn btn-secondary" href="{% url 'home' %}">← Cancelar</a>
     </div>
   </form>

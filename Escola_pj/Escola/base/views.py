@@ -141,9 +141,11 @@ def periodo_iniciar(request):
 
         # Desativa outros trimestres ativos somente para a igreja selecionada
         Trimestre.objects.filter(igreja=igreja, ativo=True).update(ativo=False)
-        Trimestre.objects.create(igreja=igreja, trimestre=nome_normalizado, ano=ano, ativo=True, concluido=False)
-        messages.success(request, "Novo trimestre iniciado.")
-        return redirect('periodo_list')
+        trimestre = Trimestre.objects.create(igreja=igreja, trimestre=nome_normalizado, ano=ano, ativo=True, concluido=False)
+        
+        # Redirecionar para criar aulas do trimestre (CDU.007)
+        messages.success(request, f"Trimestre {nome_normalizado}/{ano} iniciado. Agora crie as aulas do trimestre.")
+        return redirect('periodo_criar_aulas', trimestre_id=trimestre.id)
 
     igrejas = Igreja.objects.all()
     return render(request, 'periodo_iniciar.html', {'igrejas': igrejas, 'user_igreja': user_igreja})
@@ -180,6 +182,12 @@ def classe_create(request, id=None):
     nome = request.POST.get('nome', '').strip()
     if not nome:
         messages.error(request, 'Nome da classe é obrigatório.')
+        return redirect('classe_list')
+    
+    # CDU.008: Bloquear criação/edição de classes se trimestre ativo foi concluído
+    trimestre_ativo = Trimestre.objects.filter(ativo=True).first()
+    if trimestre_ativo and trimestre_ativo.concluido:
+        messages.error(request, 'Não é possível criar ou editar classes em um trimestre concluído.')
         return redirect('classe_list')
 
     try:
@@ -246,6 +254,11 @@ def aluno_matricular(request, classe_id=None):
             messages.warning(request, 'Nenhum trimestre disponível. Inicie um trimestre antes de matricular alunos.')
             return redirect('periodo_iniciar')
         messages.info(request, f'Usando trimestre: {trimestre.trimestre}/{trimestre.ano}')
+    
+    # CDU.008: Bloquear matrícula se trimestre foi concluído
+    if trimestre.concluido:
+        messages.error(request, 'Não é possível matricular alunos em um trimestre concluído.')
+        return redirect('aluno_list')
 
     # Excluir alunos que já têm matrícula ativa em qualquer classe no trimestre atual
     matriculados_ids = Matricula.objects.filter(trimestre=trimestre, ativa=True).values_list('aluno_id', flat=True)
@@ -351,6 +364,13 @@ def professor_delete(request, id):
     """Remove o perfil de Professor (não remove o usuário)."""
     if request.method != 'POST':
         return redirect('professor_list')
+    
+    # CDU.008: Bloquear remoção de professores se trimestre ativo foi concluído
+    trimestre_ativo = Trimestre.objects.filter(ativo=True).first()
+    if trimestre_ativo and trimestre_ativo.concluido:
+        messages.error(request, 'Não é possível remover professores em um trimestre concluído.')
+        return redirect('professor_list')
+    
     professor = get_object_or_404(Professor, id=id)
     username = getattr(professor.usuario, 'username', str(professor.id))
     try:
@@ -383,6 +403,11 @@ def aluno_transferir(request, id):
     if not trimestre:
         messages.error(request, 'Não há trimestre ativo.')
         return redirect('periodo_iniciar')
+    
+    # CDU.008: Bloquear transferência se trimestre foi concluído
+    if trimestre.concluido:
+        messages.error(request, 'Não é possível transferir alunos em um trimestre concluído.')
+        return redirect('aluno_list')
 
     if request.method == 'POST':
         nova_classe_id = request.POST.get('classe')
@@ -444,6 +469,12 @@ def aula_concluir(request, id):
     if request.method != 'POST':
         return redirect('relatorio_aula', id=id)
     aula = get_object_or_404(Aula, id=id)
+    
+    # CDU.008: Bloquear conclusão de aula se trimestre foi concluído
+    if aula.trimestre.concluido:
+        messages.error(request, 'Não é possível concluir aulas em um trimestre concluído.')
+        return redirect('relatorio_aula', id=id)
+    
     try:
         aula.concluida = True
         aula.save()
@@ -462,6 +493,7 @@ def relatorio_aula(request, id):
         'alunos_ausentes': sum(d.alunos_ausentes for d in diarios),
         'visitantes': sum(d.visitantes for d in diarios),
         'biblias': sum(d.biblias for d in diarios),
+        'revistas': sum(d.revistas for d in diarios),
         'ofertas': sum(d.ofertas for d in diarios),
         'dizimos': sum(d.dizimos for d in diarios),
     }
@@ -515,17 +547,19 @@ def diario_registro(request, aula_id):
     alunos = [m.aluno for m in matriculas]
 
     if request.method == 'POST':
-        # processa presenças
+        # processa presenças e dados do diário (CDU.002)
         presentes = request.POST.getlist('presente')  # list of aluno ids marked present
         visitantes = int(request.POST.get('visitantes') or 0)
         biblias = int(request.POST.get('biblias') or 0)
+        revistas = int(request.POST.get('revistas') or 0)
         ofertas = float(request.POST.get('ofertas') or 0)
         dizimos = float(request.POST.get('dizimos') or 0)
         observacoes = request.POST.get('observacoes')
 
-        # atualiza diario
+        # atualiza diario (CDU.002)
         diario.visitantes = visitantes
         diario.biblias = biblias
+        diario.revistas = revistas
         diario.ofertas = ofertas
         diario.dizimos = dizimos
         diario.observacoes = observacoes
@@ -564,3 +598,56 @@ def diario_presenca(request, aula_id):
     diario = get_object_or_404(Diario, aula_id=aula_id)
     presencas = Presenca.objects.filter(diario=diario)
     return render(request, 'diario_presenca_form.html', {'presencas': presencas})
+
+# CDU.007 - Criar aulas para o trimestre
+@user_passes_test(is_superintendente)
+def periodo_criar_aulas(request, trimestre_id):
+    """Cria aulas para um trimestre recém-iniciado (CDU.007)."""
+    trimestre = get_object_or_404(Trimestre, id=trimestre_id)
+    
+    # CDU.008: Bloquear criação de aulas se trimestre foi concluído
+    if trimestre.concluido:
+        messages.error(request, 'Não é possível criar aulas em um trimestre concluído.')
+        return redirect('periodo_list')
+    
+    if request.method == 'POST':
+        # Criar aulas baseado no formulário
+        classes = Classe.objects.filter(igreja=trimestre.igreja)
+        
+        # Coleta dados de todas as aulas
+        aula_count = int(request.POST.get('aula_count', 0))
+        aulas_criadas = 0
+        
+        for i in range(1, aula_count + 1):
+            titulo = request.POST.get(f'titulo_{i}', '').strip()
+            data_str = request.POST.get(f'data_{i}', '')
+            
+            if not titulo or not data_str:
+                continue
+                
+            try:
+                from datetime import datetime
+                data_prevista = datetime.strptime(data_str, '%Y-%m-%d').date()
+                
+                # Criar aula para cada classe do trimestre
+                for classe in classes:
+                    Aula.objects.create(
+                        trimestre=trimestre,
+                        classe=classe,
+                        titulo=titulo,
+                        data_prevista=data_prevista,
+                        concluida=False
+                    )
+                aulas_criadas += len(classes)
+            except Exception as e:
+                messages.warning(request, f'Erro ao criar aula "{titulo}": {str(e)}')
+                continue
+        
+        if aulas_criadas > 0:
+            messages.success(request, f'{aulas_criadas} aula(s) criada(s) com sucesso!')
+            return redirect('periodo_list')
+        else:
+            messages.error(request, 'Nenhuma aula foi criada. Verifique os dados.')
+    
+    return render(request, 'periodo_criar_aulas.html', {'trimestre': trimestre})
+

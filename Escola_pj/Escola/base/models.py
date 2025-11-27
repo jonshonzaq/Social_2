@@ -74,8 +74,6 @@ class Trimestre(models.Model):
         # Se for marcado ativo, desativa outros trimestres ativos da mesma igreja
         if self.ativo and self.igreja:
             Trimestre.objects.filter(igreja=self.igreja, ativo=True).exclude(pk=getattr(self, 'pk', None)).update(ativo=False)
-            # se está ativando, não pode estar marcado como concluído
-            self.concluido = False
 
         # Se for marcado como concluído, garante que não permanecerá ativo
         if self.concluido:
@@ -164,6 +162,7 @@ class Diario(models.Model):
     alunos_ausentes = models.PositiveIntegerField(default=0)
     visitantes = models.PositiveIntegerField(default=0)
     biblias = models.PositiveIntegerField(default=0)
+    revistas = models.PositiveIntegerField(default=0)
     ofertas = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     dizimos = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     observacoes = models.TextField(blank=True, null=True)

@@ -42,6 +42,7 @@
             <div class="col-md-6">
               <p><strong>Visitantes:</strong> {{ d.visitantes }}</p>
               <p><strong>Bíblias:</strong> {{ d.biblias }}</p>
+              <p><strong>Revistas:</strong> {{ d.revistas }}</p>
               <p><strong>Ofertas:</strong> R$ {{ d.ofertas|floatformat:2 }}</p>
               <p><strong>Dízimos:</strong> R$ {{ d.dizimos|floatformat:2 }}</p>
             </div>
@@ -79,17 +80,18 @@
       <div class="card bg-light">
         <div class="card-body">
           <div class="row text-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <h5 class="card-title">Presença</h5>
               <p class="card-text">Presentes: <strong>{{ resumo.alunos_presentes }}</strong></p>
               <p class="card-text">Ausentes: <strong>{{ resumo.alunos_ausentes }}</strong></p>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <h5 class="card-title">Materiais</h5>
               <p class="card-text">Visitantes: <strong>{{ resumo.visitantes }}</strong></p>
               <p class="card-text">Bíblias: <strong>{{ resumo.biblias }}</strong></p>
+              <p class="card-text">Revistas: <strong>{{ resumo.revistas }}</strong></p>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <h5 class="card-title">Finanças</h5>
               <p class="card-text">Ofertas: <strong>R$ {{ resumo.ofertas|floatformat:2 }}</strong></p>
               <p class="card-text">Dízimos: <strong>R$ {{ resumo.dizimos|floatformat:2 }}</strong></p>

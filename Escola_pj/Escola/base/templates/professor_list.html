@@ -3,6 +3,13 @@
 {% block conteudo %}
 <div class="container py-4">
   <h2>Lista de Professores</h2>
+
+  {% if trimestre_ativo and trimestre_ativo.concluido %}
+    <div class="alert alert-warning" role="alert">
+      <strong>⚠️ Aviso:</strong> O trimestre foi concluído. Professores não podem ser removidos ou vinculados.
+    </div>
+  {% endif %}
+
   <table class="table table-striped mt-3">
     <thead>
       <tr>
@@ -21,7 +28,7 @@
           <td>
             <form method="post" action="{% url 'professor_delete' prof.id %}" style="display:inline;" onsubmit="return confirm('Confirma exclusão do professor {{ prof.usuario.username }}?');">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-danger">Remover</button>
+              <button type="submit" class="btn btn-sm btn-danger" {% if trimestre_ativo and trimestre_ativo.concluido %}disabled title="Trimestre concluído - não é possível remover professores"{% endif %}>Remover</button>
             </form>
           </td>
         </tr>
